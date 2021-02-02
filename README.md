@@ -1,2 +1,0 @@
-# StatApp
-Projet StatApp Tennaxia
