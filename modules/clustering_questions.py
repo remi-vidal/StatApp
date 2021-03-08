@@ -81,9 +81,30 @@ def analyse_cluster(fus, n_clusters):
         print(table.groupby('domain').mean())
 
 
+
+def probas_txt_cluster(fus, clust_number, sort = True):
+
+    # Calcul des pourcentage des textes au sein du cluster
+    probas_txt = (fus.loc[fus['clust']==clust_number].groupby('surrogate_uuid')["txt_node_id"].count()/fus.loc[fus['clust']==clust_number]["txt_node_id"].nunique()).to_frame()
+    
+    # Base des textes. On prend celle de fus, un peu plus réduite (3181 textes sur les 3515 de deep_course_cf_text_versions.csv)
+    list_text = pd.DataFrame(index=fus["surrogate_uuid"].unique())
+
+    # On affecte les probas aux textes, en rajoutant 0 si le texte n'a pas été considéré dans le clustering.
+    df_merge = pd.merge(list_text, probas_txt, left_index=True, right_index=True, how='outer').fillna(0)
+
+    if sort : 
+        #Classement du texte le plus probable au moins probable
+        return df_merge.sort_values("txt_node_id", ascending = False)
+    
+    else :
+        return df_merge
+
+
+
 def similarity(df, clust_number, answ, thres=0.9):
     perc = df[df["clust"]==clust_number].mean().to_frame()
     perc.columns = ["pourcentage"]
     perc = perc.loc[perc.index.str.contains(answ)]
     
-    return perc[perc["pourcentage"]>thres]
+    return perc[perc["pourcentage"]>thres].sort_values("pourcentage", ascending = False)
