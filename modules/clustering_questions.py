@@ -1,14 +1,15 @@
 import pandas as pd
 import numpy as np
 from scipy.cluster.hierarchy import dendrogram
-from sklearn.cluster import AgglomerativeClustering
+from sklearn.cluster import AgglomerativeClustering, KMeans
+from sklearn.neighbors import KNeighborsClassifier
 from IPython.display import display, HTML
 import scipy.cluster.hierarchy as shc
 import matplotlib.pyplot as plt
 
 def clustering(df, n_clusters):
 
-    model = AgglomerativeClustering(n_clusters=4)
+    model = AgglomerativeClustering(n_clusters) #metrique ward par
     model = model.fit(df)
 
     df['clust']=model.labels_
@@ -17,6 +18,17 @@ def clustering(df, n_clusters):
     #Répartition des clusters
     print('\033[1m' + "\nRépartition des clusters : \n" + '\033[0m')
     print(df['clust'].value_counts())
+
+
+def prediction(df,test_set):
+
+    y = df['clust']  #labels du clustering
+    df_temp = df.drop(columns=["clust"])
+    neigh = KNeighborsClassifier(n_neighbors=1)
+    neigh.fit(df_temp, y)
+
+    return neigh.predict(test_set)
+
 
 
 def dendogramme(df):
