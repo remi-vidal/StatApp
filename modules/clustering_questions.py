@@ -20,14 +20,56 @@ def clustering(df, n_clusters):
     print(df['clust'].value_counts())
 
 
-def prediction(df,test_set):
 
+def prediction(df,test_set):
+    """
+    Affecte chaque élément du test_set au cluster le plus proche à partir des labels du clustering présents dans df   
+    """
     y = df['clust']  #labels du clustering
     df_temp = df.drop(columns=["clust"])
     neigh = KNeighborsClassifier(n_neighbors=1)
     neigh.fit(df_temp, y)
 
     return neigh.predict(test_set)
+
+
+
+def score(fus, test_set, labels_test_set):
+
+    precision_list=[]
+    recall_list=[]
+    # f_score_list=[]
+
+    # C'est cette base qui fait foi...
+    txt_client = pd.read_csv("../raw_data/deep_course_cf_text_version_nodes.csv", low_memory = False)
+    
+    n = len(test_set)
+
+    for i in range(n):
+
+        #Union des textes du cluster attribué au nouveau client
+        union_txt_cluster = fus[fus['clust']==labels_test_set[i]].surrogate_uuid.unique()
+
+        #Textes appliqués au client du test set
+        test_set_txt = txt_client[txt_client["txt_node_id"]==test_set.index[i]]["txt_version_surrogate_uuid"]
+
+
+        intersect = np.intersect1d(union_txt_cluster,test_set_txt)
+
+        precision_list.append(len(intersect)/len(union_txt_cluster))
+
+        recall_list.append(len(intersect)/len(test_set_txt))
+        
+
+    scores = pd.DataFrame(
+        {"precision" : precision_list,
+        "recall" : recall_list},
+        index = test_set.index)
+
+    scores["f_score"] = 2*(scores['precision']*scores['recall'])/(scores['precision']+scores['recall'])
+    
+    return scores   
+
 
 
 
@@ -78,6 +120,8 @@ def create_fusion(df, n_clusters):
 
     # On rajoute le cluster
     fus=pd.merge(fus,df_app[['txt_node_id','clust']],how='left', on='txt_node_id')
+
+    fus = fus[fus["txt_node_id"].isin(df.index)]
 
     return fus
 
