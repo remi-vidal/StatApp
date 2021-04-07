@@ -3,9 +3,11 @@ import numpy as np
 from scipy.cluster.hierarchy import dendrogram
 from sklearn.cluster import AgglomerativeClustering, KMeans
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import KFold
 from IPython.display import display, HTML
 import scipy.cluster.hierarchy as shc
 import matplotlib.pyplot as plt
+
 
 def clustering(df, n_clusters):
 
@@ -34,15 +36,13 @@ def prediction(df,test_set):
 
 
 
-def score(fus, test_set, labels_test_set):
-
+def score(fus, txt_client, test_set, labels_test_set):
+    """Renvoie les différents scores (recall, precision, f_score)
+       à partir d'une prédiction
+    """
     precision_list=[]
     recall_list=[]
-    # f_score_list=[]
 
-    # C'est cette base qui fait foi...
-    txt_client = pd.read_csv("../raw_data/deep_course_cf_text_version_nodes.csv", low_memory = False)
-    
     n = len(test_set)
 
     for i in range(n):
@@ -55,9 +55,7 @@ def score(fus, test_set, labels_test_set):
 
 
         intersect = np.intersect1d(union_txt_cluster,test_set_txt)
-
         precision_list.append(len(intersect)/len(union_txt_cluster))
-
         recall_list.append(len(intersect)/len(test_set_txt))
         
 
@@ -70,6 +68,57 @@ def score(fus, test_set, labels_test_set):
     
     return scores   
 
+def cross_validation(df, txt_client, n_clusters, K=10, shuffle = False):
+    """Validation croisée pour choisir le nombre de cluster optimal
+
+    Args:
+        df: base des réponses : client en abscisses, réponses en ordonnée
+        txt_client: sur chaque ligne, couple (texte-client) 
+        n_clusters: nombres de clusters à tester
+        K : Nombre d'échantillons pour la validation croisée
+        shuffle : mélanger la base des réponses avant le découpage ?
+    """
+    precision_list = [] 
+    recall_list = []
+    f_score_list = []
+
+    for n in n_clusters :
+        
+        print(n)
+        kf = KFold(n_splits = K, shuffle=shuffle)
+
+        scores = pd.DataFrame()
+
+        for train_index, test_index in kf.split(df):
+            train_set, test_set = df.iloc[train_index], df.iloc[test_index]
+
+            model = AgglomerativeClustering(n)
+            model = model.fit(train_set)
+
+            train_set['clust']=model.labels_
+
+            #Base de lien texte/client + cluster
+            fus = create_fusion(train_set, n)
+
+            scores = pd.concat([scores, score(fus, txt_client, test_set, prediction(train_set,test_set))])
+
+        mean_scores = scores.mean()
+        
+        precision_list.append(mean_scores[0])
+        recall_list.append(mean_scores[1])
+        f_score_list.append(mean_scores[2])
+        
+    print(precision_list,recall_list, f_score_list)
+
+    # Graphe des scores
+    X = n_clusters
+    plt.plot(X,precision_list)
+    plt.plot(X,recall_list)
+    plt.plot(X,f_score_list)
+
+    plt.legend(['precision', 'recall', 'f_score'])
+    plt.xlabel("Nombre de clusters")
+    plt.show()
 
 
 
