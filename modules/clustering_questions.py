@@ -10,6 +10,12 @@ import matplotlib.pyplot as plt
 
 
 def clustering(df, n_clusters):
+    """Clusterise les clients de la dataframe. Les labels des clusters sont ajoutés à df dans une colonne
+
+    Args:
+        df (pandas dataframe): dataframe avec les clients en ligne et les indicatrice des réponses en colonne
+        n_clusters (int): nombre de clusters
+    """
 
     model = AgglomerativeClustering(n_clusters) #metrique ward par
     model = model.fit(df)
@@ -25,8 +31,9 @@ def clustering(df, n_clusters):
 
 def prediction(df,test_set):
     """
-    Affecte chaque élément du test_set au cluster le plus proche à partir des labels du clustering présents dans df   
+    Affecte chaque élément du test_set au cluster le plus proche à partir des labels du clustering présent dans df   
     """
+
     y = df['clust']  #labels du clustering
     df_temp = df.drop(columns=["clust"])
     neigh = KNeighborsClassifier(n_neighbors=1)
@@ -42,6 +49,7 @@ def score(fus, txt_client, test_set, labels_test_set):
     """
     precision_list=[]
     recall_list=[]
+    faux_negatifs_list = []
 
     n = len(test_set)
 
@@ -57,16 +65,19 @@ def score(fus, txt_client, test_set, labels_test_set):
         intersect = np.intersect1d(union_txt_cluster,test_set_txt)
         precision_list.append(len(intersect)/len(union_txt_cluster))
         recall_list.append(len(intersect)/len(test_set_txt))
-        
+        faux_negatifs_list.append(len(test_set_txt)-len(intersect))
 
     scores = pd.DataFrame(
         {"precision" : precision_list,
-        "recall" : recall_list},
+        "recall" : recall_list,
+        "faux_negatifs" : faux_negatifs_list},
         index = test_set.index)
 
     scores["f_score"] = 2*(scores['precision']*scores['recall'])/(scores['precision']+scores['recall'])
     
     return scores   
+
+
 
 def cross_validation(df, txt_client, n_clusters, K=10, shuffle = False):
     """Validation croisée pour choisir le nombre de cluster optimal
@@ -84,14 +95,17 @@ def cross_validation(df, txt_client, n_clusters, K=10, shuffle = False):
 
     for n in n_clusters :
         
-        print(n)
+        print('\033[1m', n, " cluster(s)" + '\033[0m')
         kf = KFold(n_splits = K, shuffle=shuffle)
 
         scores = pd.DataFrame()
 
         for train_index, test_index in kf.split(df):
+
+            # Création du train test et du test set, découpage de la dataframe
             train_set, test_set = df.iloc[train_index], df.iloc[test_index]
 
+            # Entraînement du modèle
             model = AgglomerativeClustering(n)
             model = model.fit(train_set)
 
@@ -102,13 +116,24 @@ def cross_validation(df, txt_client, n_clusters, K=10, shuffle = False):
 
             scores = pd.concat([scores, score(fus, txt_client, test_set, prediction(train_set,test_set))])
 
+        print(scores['faux_negatifs'].sum()," faux négatifs", " parmi ", 
+            len(txt_client[txt_client["txt_node_id"].isin(df.index)]["txt_version_surrogate_uuid"]), " textes à identifier\n")
+
+        print(scores.groupby("faux_negatifs")["faux_negatifs"].count().to_string())
+
         mean_scores = scores.mean()
         
         precision_list.append(mean_scores[0])
         recall_list.append(mean_scores[1])
-        f_score_list.append(mean_scores[2])
-        
-    print(precision_list,recall_list, f_score_list)
+        f_score_list.append(mean_scores[3])
+
+        print("En moyenne ", mean_scores[2], "faux négatifs par client, soit", mean_scores[2]*len(scores), "au total")
+        print("La médiane est de ",scores["faux_negatifs"].median()," faux négatifs\n")
+
+    print('\033[1m' + "Liste précision :" + '\033[0m', precision_list,
+          '\033[1m' + "\nListe recall :" + '\033[0m', recall_list,
+          '\033[1m' + "\nListe f_scores :" + '\033[0m', f_score_list)
+    
 
     # Graphe des scores
     X = n_clusters
@@ -122,12 +147,14 @@ def cross_validation(df, txt_client, n_clusters, K=10, shuffle = False):
 
 
 
+
 def dendogramme(df):
 
     plt.figure(figsize=(10, 7))
     plt.title("Customer Dendograms")
     shc.dendrogram(shc.linkage(df, method='ward'))
     plt.savefig('../data/dendogram.pdf')
+
 
 
 def create_db_appliques():
@@ -146,6 +173,8 @@ def create_db_appliques():
 
     df_appliques = pd.merge(df_text_versions_node, df_text, how='left', left_on = ['txt_version_surrogate_uuid'], right_on = ['surrogate_uuid'])
     return df_appliques
+
+
 
 def create_fusion(df, n_clusters):
 
