@@ -1,0 +1,22 @@
+df_reponses= base avec en index les clients qu'on a gardé car ils avaient un bon questionnaire et en variables les reponses aux questions
+
+df_text_prop2=base avec en index les clients qu'on a gardé car ils avaient un bon questionnaire et en variables les textes qu'ils ont ou non 
+
+data= merge des deux tables précédentes
+
+data_train = data moins les 20 clients qu'on enleve pour tester notre truc à la fin 
+
+data_train_clean= data_train avec seulement les textes présents dans liste_texte_oui
+
+data_test= data de seulemnt les 20 clients pour tester à la fin 
+
+data_test_clean= data de seulemnt les 20 clients pour tester à la fin avec seulement les textes présents dans liste_texte_oui
+
+liste_question= liste des questions 
+
+liste_texte_non= liste des textes dont moins de 9% des clients les ont 
+
+liste_texte_oui= liste dont au moins 9% des clients les ont
+
+NOTE: voir le fichier definition table pour voir comment apparter les listes
+
