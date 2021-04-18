@@ -60,11 +60,14 @@ def score(fus, txt_client, test_set, labels_test_set):
 
         #Textes appliqués au client du test set
         test_set_txt = txt_client[txt_client["txt_node_id"]==test_set.index[i]]["txt_version_surrogate_uuid"]
-
+        # print(len(test_set_txt))
 
         intersect = np.intersect1d(union_txt_cluster,test_set_txt)
         precision_list.append(len(intersect)/len(union_txt_cluster))
-        recall_list.append(len(intersect)/len(test_set_txt))
+        if len(test_set_txt) != 0:
+            recall_list.append(len(intersect)/len(test_set_txt))
+        else:
+            recall_list.append(1)
         faux_negatifs_list.append(len(test_set_txt)-len(intersect))
 
     scores = pd.DataFrame(
@@ -110,7 +113,6 @@ def cross_validation(df, txt_client, n_clusters, K=10, shuffle = False):
             model = model.fit(train_set)
 
             train_set['clust']=model.labels_
-
             #Base de lien texte/client + cluster
             fus = create_fusion(train_set, n)
 
