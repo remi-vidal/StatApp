@@ -50,6 +50,8 @@ def score(fus, txt_client, test_set, labels_test_set):
     precision_list=[]
     recall_list=[]
     faux_negatifs_list = []
+    nombre_txt_list = []
+    nombre_txt_cluster = []
 
     n = len(test_set)
 
@@ -70,13 +72,18 @@ def score(fus, txt_client, test_set, labels_test_set):
             recall_list.append(1)
         faux_negatifs_list.append(len(test_set_txt)-len(intersect))
 
+        nombre_txt_list.append(len(test_set_txt))
+        nombre_txt_cluster.append(len(union_txt_cluster))
+
     scores = pd.DataFrame(
         {"precision" : precision_list,
         "recall" : recall_list,
         "faux_negatifs" : faux_negatifs_list},
         index = test_set.index)
 
-    scores["f_score"] = 2*(scores['precision']*scores['recall'])/(scores['precision']+scores['recall'])
+    # scores["f_score"] = 2*(scores['precision']*scores['recall'])/(scores['precision']+scores['recall'])
+    scores["Nombre de textes à identifier"] = nombre_txt_list
+    scores["Nombre de textes proposés"] = nombre_txt_cluster
     
     return scores   
 
