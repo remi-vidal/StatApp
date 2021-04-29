@@ -80,6 +80,7 @@ def score(fus, txt_client, test_set, labels_test_set):
         "recall" : recall_list,
         "faux_negatifs" : faux_negatifs_list},
         index = test_set.index)
+    
 
     # scores["f_score"] = 2*(scores['precision']*scores['recall'])/(scores['precision']+scores['recall'])
     scores["Nombre de textes à identifier"] = nombre_txt_list
